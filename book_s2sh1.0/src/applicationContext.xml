@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	     xmlns:aop="http://www.springframework.org/schema/aop"
+	     xmlns:tx="http://www.springframework.org/schema/tx"
+	     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.0.xsd
+           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd">
+    <!-- 配置spring 对hibernates支持（sessionFactory）  -->
+    <bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="configLocation"
+			value="classpath:hibernate.cfg.xml">
+		</property>
+	</bean>
+	<!-- 配置dao -->
+      <bean id="bookdao"  class="com.fcs.dao.impl.BookDAOImpl">
+         <property name="sessionFactory">
+          <ref bean="sessionFactory"/>
+         </property>
+      </bean>
+      <bean id="publishdao" class="com.fcs.dao.impl.PublishDAOImpl">
+      	<property name="sessionFactory">
+          <ref bean="sessionFactory"/>
+         </property>
+      </bean>
+      <!-- 配置事务管理 -->
+	<bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory"><ref local="sessionFactory"/></property>
+	</bean>
+	<!-- 配置事务的传播性 哪些方法使用事务-->
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+		<tx:method name="add*" propagation="REQUIRED"/>
+		<tx:method name="edit*" propagation="REQUIRED"/>
+		<tx:method name="update*" propagation="REQUIRED"/>
+		<tx:method name="del*" propagation="REQUIRED"/>
+		<tx:method name="*" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	<!-- 事务配置到biz层，而不配置到dao层 -->
+<!-- AOP配置  配置事务的执行范围-->
+<aop:config>
+<aop:pointcut id="managersMethod" expression="execution(* com.fcs.service.*.*(..))"/>
+<aop:advisor advice-ref="txAdvice" pointcut-ref="managersMethod"/>
+</aop:config>
+      <bean id="bookService" class="com.fcs.service.impl.BookServiceImpl">
+           <property name="bookdao">
+             <ref bean="bookdao"/>
+           </property>
+        </bean>
+      <bean id="pubService" class="com.fcs.service.impl.PublishServiceImpl">
+      		<property name="publishdao" ref="publishdao"> </property>
+      </bean>  
+      
+        <!-- -action的配置 -->
+        <bean id="bookAction" class="com.fcs.actions.BookAction"
+         scope="prototype">
+         <property name="bookService">
+           <ref bean="bookService"/>
+         </property>
+         <property name="pubService" ref="pubService"></property>
+        </bean>
+</beans>
